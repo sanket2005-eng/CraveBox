@@ -1,0 +1,55 @@
+# ── Dependencies ──────────────────────────────────────────────────────────────
+node_modules/
+.pnp
+.pnp.js
+
+# ── Environment files (NEVER commit secrets) ──────────────────────────────────
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+
+# ── Build outputs ─────────────────────────────────────────────────────────────
+dist/
+build/
+out/
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ── Testing artifacts ─────────────────────────────────────────────────────────
+test-results/
+playwright-report/
+coverage/
+*.spec.ts
+*.test.ts
+*.spec.js
+*.test.js
+tests/
+playwright.config.ts
+
+# ── OS / Editor ───────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── Misc ──────────────────────────────────────────────────────────────────────
+.cache/
+*.zip
+*.tar.gz
+frontend.zip
+START_FRONTEND.bat
+run-tests.bat
+run-tests.sh
+verify-setup.js

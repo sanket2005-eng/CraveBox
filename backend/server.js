@@ -19,12 +19,26 @@ const app = express();
 // ─── Connect to Database ──────────────────────────────────────────────────────
 connectDB();
 
+// ─── CORS Origins ─────────────────────────────────────────────────────────────
+// FRONTEND_URL in production can be a single URL or comma-separated list:
+//   e.g. "https://your-app.vercel.app,https://your-app-git-main.vercel.app"
+const getAllowedOrigins = () => {
+  if (process.env.NODE_ENV === "development") {
+    return [
+      "http://localhost:5173",
+      "http://localhost:3000",
+      "http://127.0.0.1:5173",
+      "http://127.0.0.1:3000",
+    ];
+  }
+  const raw = process.env.FRONTEND_URL || "http://localhost:5173";
+  return raw.split(",").map((u) => u.trim());
+};
+
 // ─── Core Middleware ──────────────────────────────────────────────────────────
 app.use(
   cors({
-    origin: process.env.NODE_ENV === 'development' 
-      ? ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:5000', 'http://127.0.0.1:5173', 'http://127.0.0.1:3000']
-      : process.env.FRONTEND_URL || "http://localhost:5173",
+    origin: getAllowedOrigins(),
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
