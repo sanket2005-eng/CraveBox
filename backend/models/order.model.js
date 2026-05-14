@@ -4,8 +4,7 @@ import { nanoid } from "nanoid";
 const orderItemSchema = new mongoose.Schema(
   {
     product: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Product",
+      type: String,
       required: true,
     },
     name: { type: String, required: true },

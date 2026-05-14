@@ -8,8 +8,6 @@ export const createOrder = async (req, res, next) => {
   try {
     const order = await Order.create(req.body);
 
-    await order.populate("items.product", "name image");
-
     // Send WhatsApp notification
     try {
       await sendOrderConfirmation(order);
