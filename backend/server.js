@@ -20,30 +20,45 @@ const app = express();
 connectDB();
 
 // ─── CORS Origins ─────────────────────────────────────────────────────────────
-// FRONTEND_URL in production can be a single URL or comma-separated list:
-//   e.g. "https://your-app.vercel.app,https://your-app-git-main.vercel.app"
+// Always includes localhost for dev. In production, reads FRONTEND_URL from env.
+// FRONTEND_URL can be comma-separated for multiple origins:
+//   e.g. "https://sprightly-panda-a376bb.netlify.app,https://other-preview.netlify.app"
+const DEV_ORIGINS = [
+  "http://localhost:5173",
+  "http://localhost:3000",
+  "http://127.0.0.1:5173",
+  "http://127.0.0.1:3000",
+];
+
 const getAllowedOrigins = () => {
-  if (process.env.NODE_ENV === "development") {
-    return [
-      "http://localhost:5173",
-      "http://localhost:3000",
-      "http://127.0.0.1:5173",
-      "http://127.0.0.1:3000",
-    ];
-  }
-  const raw = process.env.FRONTEND_URL || "http://localhost:5173";
-  return raw.split(",").map((u) => u.trim());
+  const raw = process.env.FRONTEND_URL || "";
+  const prodOrigins = raw
+    .split(",")
+    .map((u) => u.trim().replace(/\/$/, "")) // strip trailing slashes
+    .filter(Boolean);
+
+  return [...new Set([...DEV_ORIGINS, ...prodOrigins])];
+};
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    const allowed = getAllowedOrigins();
+    // Allow requests with no origin (curl, Postman, server-to-server)
+    if (!origin || allowed.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`❌ CORS blocked origin: ${origin}`);
+      callback(new Error(`CORS policy: origin ${origin} not allowed`));
+    }
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
 };
 
 // ─── Core Middleware ──────────────────────────────────────────────────────────
-app.use(
-  cors({
-    origin: getAllowedOrigins(),
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions)); // Explicitly handle preflight for all routes
 
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
@@ -55,6 +70,7 @@ app.get("/api/health", (req, res) => {
     success: true,
     message: "Food Ordering API is running",
     environment: process.env.NODE_ENV,
+    allowedOrigins: getAllowedOrigins(),
     timestamp: new Date().toISOString(),
   });
 });
@@ -74,7 +90,7 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`\n🚀 Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
-  console.log(`📡 API Base URL: http://localhost:${PORT}/api`);
+  console.log(`📡 Allowed origins: ${getAllowedOrigins().join(", ")}`);
   console.log(`❤️  Health Check: http://localhost:${PORT}/api/health\n`);
 });
 
