@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { CreditCard, Truck, MapPin, Phone, User, Home, Building, Landmark, Hash, CheckCircle, Wallet, Banknote, Smartphone } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import toast from 'react-hot-toast';
+import { api } from '../utils/api';
 
 const Checkout = () => {
   const navigate = useNavigate();
@@ -46,12 +47,91 @@ const Checkout = () => {
 
     setIsProcessing(true);
 
-    // Simulate order processing
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    try {
+      // Build order data matching backend schema
+      const orderData = {
+        customerName: formData.fullName,
+        phone: formData.phone,
+        address: {
+          street: `${formData.houseNo}, ${formData.area}`,
+          city: formData.city,
+          state: formData.state,
+          pincode: formData.pinCode,
+        },
+        items: cartItems.map(item => ({
+          product: item.id,
+          name: item.name,
+          price: item.variant.price,
+          quantity: item.quantity,
+          image: item.image || '',
+        })),
+        totalAmount: grandTotal,
+      };
 
-    clearCart();
-    setIsProcessing(false);
-    navigate('/order-success');
+      if (paymentMethod === 'cod') {
+        // Cash on Delivery - Direct order creation
+        const response = await api.orders.create(orderData);
+        if (response.success) {
+          toast.success(`Order placed! Order ID: ${response.data.orderId}`);
+          clearCart();
+          setIsProcessing(false);
+          navigate(`/order-success?orderId=${response.data.orderId}`);
+        }
+      } else if (paymentMethod === 'card') {
+        // Razorpay payment
+        const orderResponse = await api.payments.createOrder(orderData.totalAmount);
+        if (!orderResponse.success) throw new Error('Failed to create payment order');
+
+        const paymentData = {
+          key: import.meta.env.VITE_RAZORPAY_KEY,
+          order_id: orderResponse.data.id,
+          amount: orderResponse.data.amount,
+          currency: orderResponse.data.currency,
+          name: 'Pizza O Cafe',
+          description: `Order for ${formData.fullName}`,
+          handler: async (response) => {
+            try {
+              const verifyResponse = await api.payments.verify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                orderData,
+              });
+              if (verifyResponse.success) {
+                toast.success(`Payment successful! Order ID: ${verifyResponse.data.orderId}`);
+                clearCart();
+                setIsProcessing(false);
+                navigate(`/order-success?orderId=${verifyResponse.data.orderId}`);
+              }
+            } catch (error) {
+              toast.error('Payment verification failed: ' + error.message);
+              setIsProcessing(false);
+            }
+          },
+          prefill: {
+            name: formData.fullName,
+            contact: formData.phone,
+          },
+          theme: { color: '#ff6b35' },
+        };
+
+        const razorpay = new window.Razorpay(paymentData);
+        razorpay.open();
+        setIsProcessing(false);
+      } else {
+        // Other payment methods (UPI, Paytm, etc.) - For now, treat as COD
+        const response = await api.orders.create(orderData);
+        if (response.success) {
+          toast.success(`Order placed! Order ID: ${response.data.orderId}`);
+          clearCart();
+          setIsProcessing(false);
+          navigate(`/order-success?orderId=${response.data.orderId}`);
+        }
+      }
+    } catch (error) {
+      toast.error(error.message || 'Failed to place order');
+      setIsProcessing(false);
+    }
   };
 
   const paymentMethods = [

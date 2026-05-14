@@ -166,6 +166,7 @@ const FoodCard = ({ item, index }) => {
 
           {/* Add Button */}
           <motion.button
+            data-testid="add-to-cart-btn"
             whileTap={{ scale: 0.95 }}
             onClick={handleAddToCart}
             className={`relative px-6 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 overflow-hidden ${
