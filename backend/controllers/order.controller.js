@@ -1,5 +1,5 @@
 import Order from "../models/order.model.js";
-import { sendOrderConfirmation } from "../services/whatsapp.service.js";
+import { sendOrderConfirmation, sendAdminOrderAlert } from "../services/whatsapp.service.js";
 
 // ─── CREATE Order ─────────────────────────────────────────────────────────────
 // POST /api/orders
@@ -8,11 +8,20 @@ export const createOrder = async (req, res, next) => {
   try {
     const order = await Order.create(req.body);
 
-    // Send WhatsApp notification
+    // Send WhatsApp notifications (non-blocking)
     try {
+      // Send customer confirmation
       await sendOrderConfirmation(order);
     } catch (whatsappError) {
-      console.error("WhatsApp notification failed:", whatsappError.message);
+      console.error("Customer WhatsApp notification failed:", whatsappError.message);
+      // Don't fail the order, just log the error
+    }
+
+    try {
+      // Send admin alert
+      await sendAdminOrderAlert(order);
+    } catch (adminError) {
+      console.error("Admin WhatsApp notification failed:", adminError.message);
       // Don't fail the order, just log the error
     }
 

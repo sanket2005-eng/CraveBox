@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import razorpay from "../config/razorpay.js";
 import Order from "../models/order.model.js";
-import { sendOrderConfirmation } from "../services/whatsapp.service.js";
+import { sendOrderConfirmation, sendAdminOrderAlert } from "../services/whatsapp.service.js";
 
 // ─── Create Razorpay Order ────────────────────────────────────────────────────
 // POST /api/payments/create-order
@@ -70,12 +70,21 @@ export const verifyPayment = async (req, res, next) => {
       orderStatus: "confirmed",
     });
 
-    // ── Send WhatsApp Confirmation ──────────────────────────────────────────
+    // ── Send WhatsApp Notifications ──────────────────────────────────────────
     try {
+      // Send customer confirmation
       await sendOrderConfirmation(order);
     } catch (whatsappError) {
       // Non-blocking — log but don't fail the response
-      console.error("WhatsApp notification failed:", whatsappError.message);
+      console.error("Customer WhatsApp notification failed:", whatsappError.message);
+    }
+
+    try {
+      // Send admin alert
+      await sendAdminOrderAlert(order);
+    } catch (adminError) {
+      // Non-blocking — log but don't fail the response
+      console.error("Admin WhatsApp notification failed:", adminError.message);
     }
 
     res.status(201).json({
